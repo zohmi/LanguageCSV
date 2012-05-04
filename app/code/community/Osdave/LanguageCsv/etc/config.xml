@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Osdave_LanguageCsv>
+            <version>0.1.0</version>
+        </Osdave_LanguageCsv>
+    </modules>
+
+    <admin>
+        <routers>
+            <languagecsv>
+                <use>admin</use>
+                <args>
+                    <module>Osdave_LanguageCsv</module>
+                    <frontName>languagecsv</frontName>
+                </args>
+            </languagecsv>
+        </routers>
+    </admin>
+
+    <global>
+        <models>
+            <languagecsv>
+                <class>Osdave_LanguageCsv_Model</class>
+                <resourceModel>languagecsv_mysql4</resourceModel>
+            </languagecsv>
+            <languagecsv_mysql4>
+                <class>Osdave_LanguageCsv_Model_Mysql4</class>
+            </languagecsv_mysql4>
+        </models>
+
+        <helpers>
+            <languagecsv>
+                <class>Osdave_LanguageCsv_Helper</class>
+            </languagecsv>
+        </helpers>
+
+        <blocks>
+            <languagecsv>
+                <class>Osdave_LanguageCsv_Block</class>
+            </languagecsv>
+        </blocks>
+    </global>
+
+    <adminhtml>
+        <translate>
+            <modules>
+                <Osdave_LanguageCsv>
+                    <files>
+                        <default>Osdave_LanguageCsv.csv</default>
+                    </files>
+                </Osdave_LanguageCsv>
+            </modules>
+        </translate>
+
+        <layout>
+            <updates>
+                <tpv>
+                    <file>osdave/languagecsv.xml</file>
+                </tpv>
+            </updates>
+        </layout>
+    </adminhtml>
+
+    <default>
+        <dev>
+            <languagecsv>
+                <tree_depth>3</tree_depth>
+            </languagecsv>
+        </dev>
+    </default>
+</config>

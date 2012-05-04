@@ -1,0 +1,8 @@
+<config>
+    <modules>
+        <Osdave_LanguageCsv>
+            <active>true</active>
+            <codePool>community</codePool>
+        </Osdave_LanguageCsv>
+    </modules>
+</config>

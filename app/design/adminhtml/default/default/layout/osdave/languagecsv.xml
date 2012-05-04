@@ -1,0 +1,12 @@
+<layout>
+    <languagecsv_index_index>
+        <reference name="head">
+            <action method="addJs"><script>osdave/languagecsv.js</script></action>
+            <action method="addCss"><name>osdave/languagecsv.css</name></action>
+        </reference>
+
+        <reference name="content">
+            <block type="languagecsv/javascript" name="osdave_languagecsv_javascript" template="osdave/languagecsv/javascript.phtml"/>
+        </reference>
+    </languagecsv_index_index>
+</layout>
