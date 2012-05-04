@@ -10,8 +10,8 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
     const LANGUAGE_FILE_EXTENSION = 'csv';
     const MODULE_DEFINITION_FILE_EXTENSION = 'xml';
 
-    consT PATTERN_QUOTE_SINGLE = '/__\(\'(.+?)[\'\)|\',]/';
-    consT PATTERN_QUOTE_DOUBLE = '/__\("(.+?)["\)|",]/';
+    consT PATTERN_QUOTE_SINGLE = '/__\(\'(.+?)(\'\)|\',)/';
+    consT PATTERN_QUOTE_DOUBLE = '/__\("(.+?)("\)|",)/';
 
     /**
      * file pointer
