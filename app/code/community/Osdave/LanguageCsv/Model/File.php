@@ -7,11 +7,14 @@
  */
 class Osdave_LanguageCsv_Model_File extends Varien_Object
 {
+
     const LANGUAGE_FILE_EXTENSION = 'csv';
     const MODULE_DEFINITION_FILE_EXTENSION = 'xml';
 
-    consT PATTERN_QUOTE_SINGLE = '/__\(\'(.+?)(\'\)|\',)/';
-    consT PATTERN_QUOTE_DOUBLE = '/__\("(.+?)("\)|",)/';
+    const PATTERN_QUOTE_SINGLE = '/__\(\'(.+?)(\'\)|\',)/';
+    const PATTERN_QUOTE_DOUBLE = '/__\("(.+?)("\)|",)/';
+    const PATTERN_SYSTEM_TAGS_TO_TRANSLATE = '/ translate="(.+?)"/';
+    const PATTERN_SYSTEM_TAGS_NAME = '/<(.+?) /';
 
     /**
      * file pointer
@@ -19,6 +22,10 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      * @var resource
      */
     protected $_handler = null;
+
+    private $_endingTag;
+    private $_tagsToTranslate;
+    private $_stringsInFile = array();
 
     /**
      * Load language file info
@@ -29,19 +36,19 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function load($fileName, $filePath)
     {
-        list ($time, $type) = explode("_", substr($fileName, 0, strrpos($fileName, ".")));
-        $this->addData(array(
-            'id' => $filePath . DS . $fileName,
-            'name' => $fileName,
-            'path' => $filePath
-        ));
+	list ($time, $type) = explode("_", substr($fileName, 0, strrpos($fileName, ".")));
+	$this->addData(array(
+	    'id' => $filePath . DS . $fileName,
+	    'name' => $fileName,
+	    'path' => $filePath
+	));
 //        $this->setType($type);
-        return $this;
+	return $this;
     }
 
     public function getFileName()
     {
-        return $this->getName() . '.' . self::LANGUAGE_FILE_EXTENSION;
+	return $this->getName() . '.' . self::LANGUAGE_FILE_EXTENSION;
     }
 
     /**
@@ -51,7 +58,7 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function exists()
     {
-        return is_file($this->getPath() . DS . $this->getName());
+	return is_file($this->getPath() . DS . $this->getName());
     }
 
     /**
@@ -60,128 +67,152 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function output()
     {
-        if (!$this->exists()) {
-            return ;
-        }
+	if (!$this->exists()) {
+	    return;
+	}
 
-        $ioAdapter = new Varien_Io_File();
-        $ioAdapter->open(array('path' => $this->getPath()));
+	$ioAdapter = new Varien_Io_File();
+	$ioAdapter->open(array('path' => $this->getPath()));
 
-        $ioAdapter->streamOpen($this->getName(), 'r');
-        while ($buffer = $ioAdapter->streamRead()) {
-            echo $buffer;
-        }
-        $ioAdapter->streamClose();
+	$ioAdapter->streamOpen($this->getName(), 'r');
+	while ($buffer = $ioAdapter->streamRead()) {
+	    echo $buffer;
+	}
+	$ioAdapter->streamClose();
     }
 
     public function createLanguageCsvFile($languagecsv, $frontendTemplateRootFolder, $adminTemplateRootFolder)
     {
-        $languagecsv->open(true);
+	$languagecsv->open(true);
 
-        //1. get all files from module
-        //1.1. get all php files
-        $phpFiles = $languagecsv->getModuleFiles();
-        $languagecsv->extractStrings($phpFiles, 'php');
-        //1.2. get all phtml files
-        if (!is_null($frontendTemplateRootFolder) && ($frontendTemplateRootFolder != '')) {
-            $frontendPhtmlFiles = $languagecsv->getTemplateFiles($frontendTemplateRootFolder);
-            $languagecsv->extractStrings($frontendPhtmlFiles, 'phtml');
-        }
-        if (!is_null($adminTemplateRootFolder) && ($adminTemplateRootFolder != '')) {
-            $adminPhtmlFiles = $languagecsv->getTemplateFiles($adminTemplateRootFolder);
-            $languagecsv->extractStrings($adminPhtmlFiles, 'phtml');
-        }
+	//1. get all files from module
+	//1.1. get all php files
+	$moduleFiles = $languagecsv->getModuleFiles();
+	$languagecsv->extractStrings($moduleFiles, 'php');
+	//1.2. get all phtml files
+	if (!is_null($frontendTemplateRootFolder) && ($frontendTemplateRootFolder != '')) {
+	    $frontendPhtmlFiles = $languagecsv->getTemplateFiles($frontendTemplateRootFolder);
+	    $languagecsv->extractStrings($frontendPhtmlFiles, 'phtml');
+	}
+	if (!is_null($adminTemplateRootFolder) && ($adminTemplateRootFolder != '')) {
+	    $adminPhtmlFiles = $languagecsv->getTemplateFiles($adminTemplateRootFolder);
+	    $languagecsv->extractStrings($adminPhtmlFiles, 'phtml');
+	}
 
-        $languagecsv->close();
+	$languagecsv->close();
     }
 
     public function getModuleFiles()
     {
-        $codePool = $this->_getCodePool();
-        $module = str_replace('_', DS, $this->getName());
-        $pathToDirectory = Mage::getBaseDir('code') . DS . $codePool . DS . $module . DS;
+	$codePool = $this->_getCodePool();
+	$module = str_replace('_', DS, $this->getName());
+	$pathToDirectory = Mage::getBaseDir('code') . DS . $codePool . DS . $module . DS;
 
-        $objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($pathToDirectory));
+	$objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($pathToDirectory));
 
-        return $objects;
+	return $objects;
     }
 
     public function getTemplateFiles($rootFolder)
     {
-        $objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rootFolder));
+	$objects = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rootFolder));
 
-        return $objects;
+	return $objects;
     }
 
     public function extractStrings($objects, $type = null)
     {
-        foreach($objects as $file => $object) {
-            if (!is_null($type) && (substr(strrchr($file,'.'),1) == $type) ||
-                    is_null($type)) {
-                //parse file
-                $file_handle = fopen($file, "r");
-                while (!feof($file_handle)) {
-                    $line = fgets($file_handle);
-                    preg_match_all(self::PATTERN_QUOTE_SINGLE, $line, $singleQuoteMatches);
-                    if (sizeof($singleQuoteMatches[1])) {
-                        foreach ($singleQuoteMatches[1] as $string) {
-                            $string = str_replace('"', '""', $string);
-                            $this->write('"' . $string . '","' . $string . "\"\r\n");
-                        }
-                    }
-                    preg_match_all(self::PATTERN_QUOTE_DOUBLE, $line, $doubleQuoteMatches);
-                    if (sizeof($doubleQuoteMatches[1])) {
-                        foreach ($doubleQuoteMatches[1] as $string) {
-                            $this->write('"' . $string . '","' . $string . "\"\r\n");
-                        }
-                    }
-                }
-                fclose($file_handle);
-            }
-        }
-
+	foreach ($objects as $file => $object) {
+	    if ($object->getFilename() == 'system.xml') {
+		$file_handle = fopen($file, "r");
+		while (!feof($file_handle)) {
+		    $line = fgets($file_handle);
+		    if (strpos($line, ' translate="')) {
+			preg_match(self::PATTERN_SYSTEM_TAGS_NAME, $line, $tagName);
+			$this->_endingTag = '</' . $tagName[1] . '>';
+			preg_match(self::PATTERN_SYSTEM_TAGS_TO_TRANSLATE, $line, $tagsToTranslate);
+			$this->_tagsToTranslate = explode(" ", $tagsToTranslate[1]);
+		    } else if (!is_null($this->_tagsToTranslate)) {
+			foreach ($this->_tagsToTranslate as $tagToTranslate) {
+			    if (strpos($line, '<' . $tagToTranslate . '>')) {
+				preg_match('/>(.+)</', $line, $tagStringToTranslate);
+				if (sizeof($tagStringToTranslate)) {
+				    $string = str_replace('"', '""', $tagStringToTranslate[1]);
+				    $this->write('"' . $string . '","' . $string . "\"\r\n");
+				}
+			    }
+			}
+		    }
+		    if (!is_null($this->_endingTag) && strpos($line, $this->_endingTag)) {
+			$this->_endingTag = NULL;
+			$this->_tagsToTranslate = NULL;
+		    }
+		}
+		$brek = true;
+	    } else if (!is_null($type) && (substr(strrchr($file, '.'), 1) == $type) || is_null($type)) {
+		//parse file
+		$file_handle = fopen($file, "r");
+		while (!feof($file_handle)) {
+		    $line = fgets($file_handle);
+		    preg_match_all(self::PATTERN_QUOTE_SINGLE, $line, $singleQuoteMatches);
+		    if (sizeof($singleQuoteMatches[1])) {
+			foreach ($singleQuoteMatches[1] as $string) {
+			    $string = str_replace('"', '""', $string);
+			    $this->write('"' . $string . '","' . $string . "\"\r\n");
+			}
+		    }
+		    preg_match_all(self::PATTERN_QUOTE_DOUBLE, $line, $doubleQuoteMatches);
+		    if (sizeof($doubleQuoteMatches[1])) {
+			foreach ($doubleQuoteMatches[1] as $string) {
+			    $this->write('"' . $string . '","' . $string . "\"\r\n");
+			}
+		    }
+		}
+		fclose($file_handle);
+	    }
+	}
     }
 
     private function _getCodePool()
     {
-        $moduleName = $this->getName();
-        $moduleXmlFile = simplexml_load_file(Mage::getBaseDir('etc') .'/modules/' . $moduleName . '.' . self::MODULE_DEFINITION_FILE_EXTENSION);
-        $codePool = $moduleXmlFile->modules->$moduleName->codePool;
+	$moduleName = $this->getName();
+	$moduleXmlFile = simplexml_load_file(Mage::getBaseDir('etc') . '/modules/' . $moduleName . '.' . self::MODULE_DEFINITION_FILE_EXTENSION);
+	$codePool = $moduleXmlFile->modules->$moduleName->codePool;
 
-        return (string)$codePool;
+	return (string) $codePool;
     }
 
     public function open($write = false)
     {
-        if (is_null($this->getPath())) {
-            Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file path was not specified.'));
-        }
+	if (is_null($this->getPath())) {
+	    Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file path was not specified.'));
+	}
 
-        $ioAdapter = new Varien_Io_File();
-        try {
-            $path = $ioAdapter->getCleanPath($this->getPath());
-            $ioAdapter->checkAndCreateFolder($path);
-            $filePath = $path . DS . $this->getFileName();
-        } catch (Exception $e) {
-            Mage::exception('Osdave_LanguageCsv', $e->getMessage());
-        }
+	$ioAdapter = new Varien_Io_File();
+	try {
+	    $path = $ioAdapter->getCleanPath($this->getPath());
+	    $ioAdapter->checkAndCreateFolder($path);
+	    $filePath = $path . DS . $this->getFileName();
+	} catch (Exception $e) {
+	    Mage::exception('Osdave_LanguageCsv', $e->getMessage());
+	}
 
-        if ($write && $ioAdapter->fileExists($filePath)) {
-            $ioAdapter->rm($filePath);
-        }
-        if (!$write && !$ioAdapter->fileExists($filePath)) {
-            Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file "%s" does not exist.', $this->getFileName()));
-        }
+	if ($write && $ioAdapter->fileExists($filePath)) {
+	    $ioAdapter->rm($filePath);
+	}
+	if (!$write && !$ioAdapter->fileExists($filePath)) {
+	    Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file "%s" does not exist.', $this->getFileName()));
+	}
 
-        $mode = $write ? 'a+' : 'r';
+	$mode = $write ? 'a+' : 'r';
 
-        try {
-            $this->_handler = fopen($filePath, $mode);
-        } catch (Exception $e) {
-            Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file "%s" cannot be read from or written to.', $this->getFileName()));
-        }
+	try {
+	    $this->_handler = fopen($filePath, $mode);
+	} catch (Exception $e) {
+	    Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language CSV file "%s" cannot be read from or written to.', $this->getFileName()));
+	}
 
-        return $this;
+	return $this;
     }
 
     /**
@@ -192,17 +223,20 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function write($string)
     {
-        if (is_null($this->_handler)) {
-            Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language csv file handler was unspecified.'));
-        }
+	if (is_null($this->_handler)) {
+	    Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('Language csv file handler was unspecified.'));
+	}
 
-        try {
-            gzwrite($this->_handler, $string);
-        } catch (Exception $e) {
-            Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('An error occurred while writing to the language csv file "%s".', $this->getFileName()));
-        }
+	try {
+	    if (!in_array($string, $this->_stringsInFile)) {
+		gzwrite($this->_handler, $string);
+		$this->_stringsInFile[] = $string;
+	    }
+	} catch (Exception $e) {
+	    Mage::exception('Osdave_LanguageCsv', Mage::helper('languagecsv')->__('An error occurred while writing to the language csv file "%s".', $this->getFileName()));
+	}
 
-        return $this;
+	return $this;
     }
 
     /**
@@ -212,10 +246,10 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function close()
     {
-        @fclose($this->_handler);
-        $this->_handler = null;
+	@fclose($this->_handler);
+	$this->_handler = null;
 
-        return $this;
+	return $this;
     }
 
     /**
@@ -225,14 +259,14 @@ class Osdave_LanguageCsv_Model_File extends Varien_Object
      */
     public function deleteFile()
     {
-        if (!$this->exists()) {
-            Mage::throwException(Mage::helper('languagecsv')->__("CSV Language file does not exist."));
-        }
+	if (!$this->exists()) {
+	    Mage::throwException(Mage::helper('languagecsv')->__("CSV Language file does not exist."));
+	}
 
-        $ioProxy = new Varien_Io_File();
-        $ioProxy->open(array('path'=>$this->getPath()));
-        $ioProxy->rm($this->getName());
-        return $this;
+	$ioProxy = new Varien_Io_File();
+	$ioProxy->open(array('path' => $this->getPath()));
+	$ioProxy->rm($this->getName());
+	return $this;
     }
 
 }
