@@ -13,24 +13,28 @@
         <label for="adminhtml"><?php echo $this->__('Select an admin template folder:') ?></label>
         <select name="adminhtml">
             <option value=""></option>
-            <?php foreach ($adminTemplates as $template => $folders): ?>
-            <optgroup label="<?php echo $template; ?>">
-                <?php foreach ($folders as $folder): ?>
-                <option value="<?php echo $folder['value']; ?>" class="depth-<?php //echo $folder['class']; ?>"><?php echo $folder['label']; ?></option>
-                <?php endforeach; ?>
-            </optgroup>
-            <?php endforeach; ?>
+	    <?php for ($i=0; $i<sizeof($adminTemplates); $i++): ?>
+		<?php foreach ($adminTemplates[$i] as $template => $folders): ?>
+		<optgroup label="<?php echo $template; ?>">
+		    <?php foreach ($folders as $folder): ?>
+		    <option value="<?php echo $folder['value']; ?>" class="depth-<?php echo $folder['depth']; ?>"><?php echo $folder['label']; ?></option>
+		    <?php endforeach; ?>
+		</optgroup>
+		<?php endforeach; ?>
+	    <?php endfor; ?>
         </select>
         <label for="frontend"><?php echo $this->__('Select a frontend template folder:') ?></label>
         <select name="frontend">
             <option value=""></option>
-            <?php foreach ($frontendTemplates as $template => $folders): ?>
-            <optgroup label="<?php echo $template; ?>">
-                <?php foreach ($folders as $folder): ?>
-                <option value="<?php echo $folder['value']; ?>" class="depth-<?php //echo $folder['class']; ?>"><?php echo $folder['label']; ?></option>
-                <?php endforeach; ?>
-            </optgroup>
-            <?php endforeach; ?>
+	    <?php for ($i=0; $i<sizeof($frontendTemplates); $i++): ?>
+		<?php foreach ($frontendTemplates[$i] as $template => $folders): ?>
+		<optgroup label="<?php echo $template; ?>">
+		    <?php foreach ($folders as $folder): ?>
+		    <option value="<?php echo $folder['value']; ?>" class="depth-<?php echo $folder['depth']; ?>"><?php echo $folder['label']; ?></option>
+		    <?php endforeach; ?>
+		</optgroup>
+		<?php endforeach; ?>
+	    <?php endfor; ?>
         </select>
         <button class="scalable" type="button" onclick="selectModule.submit()">
             <span><?php echo $this->__('Submit'); ?></span>

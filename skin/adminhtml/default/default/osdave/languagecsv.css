@@ -5,3 +5,15 @@ option.depth-1 {
 option.depth-2 {
     padding-left: 20px;
 }
+
+option.depth-3 {
+    padding-left: 30px;
+}
+
+option.depth-4 {
+    padding-left: 40px;
+}
+
+option.depth-5 {
+    padding-left: 50px;
+}
